@@ -33,3 +33,10 @@ test("runtime batches mutation roots instead of cancelling earlier scans", () =>
   assert.match(runtime, /pendingScanRoots\.add/);
   assert.doesNotMatch(runtime, /cancelAnimationFrame\(scheduleScan\.frame\)/);
 });
+
+test("runtime avoids broad container alignment that can move surrounding UI", () => {
+  assert.doesNotMatch(runtime, /data-openchamber-rtl-container/);
+  assert.doesNotMatch(runtime, /\[class\*='chat' i\]/);
+  assert.doesNotMatch(runtime, /\[class\*='message' i\]/);
+  assert.doesNotMatch(runtime, /markContainer/);
+});

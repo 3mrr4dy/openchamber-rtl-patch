@@ -16,8 +16,6 @@
     "[data-markdown] blockquote",
     ".typography-markdown-body",
     ".typography-body",
-    "[class*='message' i]",
-    "[class*='chat' i]",
     "[class*='prose' i]",
     "p",
     "li",
@@ -47,14 +45,6 @@
     "[data-markdown='table']",
     "[data-language]",
   ].join(",");
-  const CONTAINER_SELECTOR = [
-    "[data-markdown]",
-    ".typography-markdown-body",
-    ".typography-body",
-    "[class*='message' i]",
-    "[class*='chat' i]",
-    "[role='textbox']",
-  ].join(",");
   const TEXT_SURFACE_SELECTOR = [
     "p",
     "li",
@@ -68,8 +58,6 @@
     ".typography-markdown-body",
     ".typography-body",
     "[data-markdown]",
-    "[class*='message' i]",
-    "[class*='chat' i]",
     "[class*='prose' i]",
   ].join(",");
 
@@ -87,21 +75,7 @@
         unicode-bidi: plaintext;
       }
 
-      [data-openchamber-rtl-container="true"] {
-        text-align: right !important;
-      }
-
       [data-openchamber-rtl-text-surface="true"] {
-        direction: rtl !important;
-        text-align: right !important;
-        unicode-bidi: plaintext;
-      }
-
-      [data-openchamber-rtl-container="true"] p,
-      [data-openchamber-rtl-container="true"] li,
-      [data-openchamber-rtl-container="true"] blockquote,
-      [data-openchamber-rtl-container="true"] .typography-body,
-      [data-openchamber-rtl-container="true"] .typography-markdown-body {
         direction: rtl !important;
         text-align: right !important;
         unicode-bidi: plaintext;
@@ -202,7 +176,6 @@
     surface.dataset.openchamberRtlTextSurface = "true";
     surface.dataset.openchamberRtl = "true";
     surface.setAttribute("dir", "rtl");
-    markContainer(surface, true);
   }
 
   function scanTextNodes(root) {
@@ -223,20 +196,6 @@
     }
   }
 
-  function markContainer(element, rtl) {
-    const container = element.closest(CONTAINER_SELECTOR);
-    if (!container || !(container instanceof HTMLElement) || shouldSkip(container)) return;
-
-    if (rtl) {
-      container.dataset.openchamberRtlContainer = "true";
-      return;
-    }
-
-    if (!RTL_CHAR_RE.test(container.innerText || container.textContent || "")) {
-      container.removeAttribute("data-openchamber-rtl-container");
-    }
-  }
-
   function applyDirection(element) {
     if (!(element instanceof HTMLElement) || shouldSkip(element)) return;
     const text = elementText(element).trim();
@@ -245,14 +204,12 @@
     if (rtl) {
       element.dataset.openchamberRtl = "true";
       element.setAttribute("dir", "rtl");
-      markContainer(element, true);
       return;
     }
 
     if (isEditable(element)) {
       element.removeAttribute("data-openchamber-rtl");
       element.setAttribute("dir", "auto");
-      markContainer(element, false);
     }
   }
 
