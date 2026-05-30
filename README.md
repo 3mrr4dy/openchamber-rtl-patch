@@ -1,0 +1,63 @@
+# OpenChamber RTL Patch for macOS
+
+Unofficial macOS-only RTL patch for the OpenChamber desktop app.
+
+This patch injects a small runtime script into OpenChamber's bundled web UI so Arabic, Hebrew, and other RTL text can render right-to-left and align to the right, while code blocks, terminal output, tables, and markdown code stay left-to-right.
+
+## macOS Only
+
+This project is designed for macOS only.
+
+It depends on macOS application bundle paths, `/Applications/OpenChamber.app`, `osascript`, and `codesign`. It is not intended for Windows or Linux.
+
+## What It Does
+
+- Finds `/Applications/OpenChamber.app`.
+- Backs up the original `web-dist/index.html` and `web-dist/mini-chat.html`.
+- Injects an RTL runtime script into OpenChamber's `web-dist/assets` folder.
+- Patches both the main window and mini chat HTML entrypoints.
+- Re-signs the app locally with an ad-hoc signature.
+- Keeps code-like surfaces in LTR mode.
+- Applies RTL when any RTL character appears, even if the line starts with English text.
+
+## Install
+
+Close OpenChamber first, then run:
+
+```bash
+bash openchamber-rtl-patch.sh
+```
+
+You may be asked for your macOS password depending on your local permissions.
+
+After installation, reopen OpenChamber.
+
+## Restore
+
+To restore the original OpenChamber files:
+
+```bash
+bash openchamber-rtl-patch.sh --restore
+```
+
+## After OpenChamber Updates
+
+OpenChamber updates may overwrite the patch. If RTL support disappears after an update, run the installer again.
+
+The installer keeps backups under:
+
+```text
+~/Library/Application Support/OpenChamber RTL Patch
+```
+
+## Test
+
+```bash
+npm test
+```
+
+## Notes
+
+This is an unofficial local patch. It modifies the installed app bundle on your machine and may need to be re-applied after app updates.
+
+If macOS shows a security warning after patching, open System Settings, go to Privacy & Security, and allow the app manually if you trust this local modification.

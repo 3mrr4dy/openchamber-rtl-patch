@@ -1,0 +1,19 @@
+{
+  "name": "openchamber-rtl-patch",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "Unofficial macOS-only RTL patch for the OpenChamber desktop app.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs && node --check openchamber-rtl-patch.js && node --check install-openchamber-rtl.mjs && node --check uninstall-openchamber-rtl.mjs && bash -n openchamber-rtl-patch.sh"
+  },
+  "keywords": [
+    "openchamber",
+    "rtl",
+    "arabic",
+    "hebrew",
+    "macos",
+    "electron"
+  ],
+  "license": "MIT"
+}
