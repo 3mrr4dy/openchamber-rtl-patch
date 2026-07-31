@@ -14,6 +14,8 @@
     "[data-markdown] p",
     "[data-markdown] li",
     "[data-markdown] blockquote",
+    "[data-markdown-content]",
+    "[data-message-text-export-root]",
     ".typography-markdown-body",
     ".typography-body",
     "[class*='prose' i]",
@@ -139,7 +141,7 @@
   }
 
   function shouldSkip(element) {
-    return Boolean(element.closest(SKIP_SELECTOR));
+    return element instanceof Element && Boolean(element.closest(SKIP_SELECTOR));
   }
 
   function shouldApplyRtl(text) {
@@ -207,6 +209,11 @@
       return;
     }
 
+    if (element.dataset.openchamberRtl === "true") {
+      delete element.dataset.openchamberRtl;
+      if (element.getAttribute("dir") === "rtl") element.setAttribute("dir", "auto");
+    }
+
     if (isEditable(element)) {
       element.removeAttribute("data-openchamber-rtl");
       element.setAttribute("dir", "auto");
@@ -237,6 +244,11 @@
     });
   }
 
+  function scheduleFullScan() {
+    clearTimeout(scheduleFullScan.timer);
+    scheduleFullScan.timer = setTimeout(() => scan(document.body), 180);
+  }
+
   installStyle();
   scan();
   setTimeout(() => scan(), 250);
@@ -247,19 +259,37 @@
     if (event.target instanceof HTMLElement) applyDirection(event.target);
   }, true);
 
-  new MutationObserver((mutations) => {
+  function handleMutations(mutations) {
+    scheduleFullScan();
     for (const mutation of mutations) {
       if (mutation.type === "characterData") {
         const parent = mutation.target.parentElement;
         if (parent) scheduleScan(parent);
       }
       for (const node of mutation.addedNodes) {
-        if (node instanceof HTMLElement) scheduleScan(node);
+        if (node instanceof HTMLElement) {
+          scheduleScan(node);
+          if (node.shadowRoot) observeRoot(node.shadowRoot);
+        } else {
+          scheduleScan(document.body);
+        }
       }
     }
-  }).observe(document.documentElement, {
-    childList: true,
-    characterData: true,
-    subtree: true,
-  });
+  }
+
+  const observer = new MutationObserver(handleMutations);
+  function observeRoot(root) {
+    observer.observe(root, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    root.querySelectorAll?.("*").forEach((element) => {
+      if (element.shadowRoot) observeRoot(element.shadowRoot);
+    });
+  }
+
+  observeRoot(document.documentElement);
+  /* Tool cards can finish hydrating after their first DOM insertion. */
+  setInterval(() => scan(document.body), 3000);
 })();

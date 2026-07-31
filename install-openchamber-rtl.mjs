@@ -22,6 +22,7 @@ const MINI_CHAT_HTML_PATH = `${WEB_DIST_DIR}/mini-chat.html`;
 const ASSETS_DIR = `${WEB_DIST_DIR}/assets`;
 const STATE_DIR = join(homedir(), "Library/Application Support/OpenChamber RTL Patch");
 const STATE_PATH = join(STATE_DIR, "state.json");
+const ORIGINAL_APPS_DIR = join(STATE_DIR, "original-apps");
 const HTML_FILES = [
   ["index.html", INDEX_HTML_PATH],
   ["mini-chat.html", MINI_CHAT_HTML_PATH],
@@ -60,6 +61,60 @@ function output(command, args) {
   return execFileSync(command, args, { encoding: "utf8" }).trim();
 }
 
+export function getInstalledOpenChamberVersion() {
+  return output("/usr/libexec/PlistBuddy", ["-c", "Print :CFBundleShortVersionString", `${APP_PATH}/Contents/Info.plist`]);
+}
+
+export function isOfficiallySignedApp(appPath = APP_PATH) {
+  try {
+    execFileSync("codesign", ["--verify", "--deep", "--strict", appPath], { stdio: "ignore" });
+    const details = execFileSync("/bin/sh", ["-c", `codesign -dvvv --requirements - "$1" 2>&1`, "codesign", appPath], { encoding: "utf8" });
+    return /TeamIdentifier=\S+/.test(details) && !/TeamIdentifier=not set/.test(details);
+  } catch {
+    return false;
+  }
+}
+
+function copyAppBundle(source, destination) {
+  run("ditto", [source, destination]);
+}
+
+export function ensureOriginalAppBackup(version = getInstalledOpenChamberVersion()) {
+  mkdirSync(ORIGINAL_APPS_DIR, { recursive: true });
+  const backupPath = join(ORIGINAL_APPS_DIR, `${version}.app`);
+  if (existsSync(backupPath)) return backupPath;
+  if (!isOfficiallySignedApp(APP_PATH)) return null;
+  console.log(`Saving the official signed OpenChamber ${version} bundle...`);
+  copyAppBundle(APP_PATH, backupPath);
+  return backupPath;
+}
+
+export function readPatchState() {
+  return existsSync(STATE_PATH) ? JSON.parse(readFileSync(STATE_PATH, "utf8")) : null;
+}
+
+export function writePatchState(state) {
+  mkdirSync(STATE_DIR, { recursive: true });
+  writeFileSync(STATE_PATH, `${JSON.stringify(state, null, 2)}\n`);
+}
+
+export function prepareOfficialAppForUpdate() {
+  const state = readPatchState();
+  if (!state?.originalAppPath || !existsSync(state.originalAppPath)) {
+    throw new Error("No official signed app backup exists. Install the patch once from an official OpenChamber build first.");
+  }
+  console.log(`Restoring official signed OpenChamber ${state.originalAppVersion || state.openChamberVersion} before update...`);
+  stopOpenChamberIfRunning();
+  rmSync(APP_PATH, { recursive: true, force: true });
+  copyAppBundle(state.originalAppPath, APP_PATH);
+  writePatchState({
+    ...state,
+    updatePreparedAt: new Date().toISOString(),
+    updatePreparedFromVersion: state.openChamberVersion,
+  });
+  console.log("Official app restored. Start the update from OpenChamber; the smart watcher will reapply RTL after restart.");
+}
+
 function sha256Buffer(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
@@ -93,6 +148,15 @@ function stopOpenChamberIfRunning() {
   } catch {
     // OpenChamber may not be running or may not be scriptable.
   }
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      execFileSync("pgrep", ["-f", `${APP_PATH}/Contents/MacOS/OpenChamber$`], { stdio: "ignore" });
+      execFileSync("sleep", ["1"]);
+    } catch {
+      return;
+    }
+  }
+  throw new Error("OpenChamber did not quit cleanly; refusing to replace the app while it is running.");
 }
 
 function adHocResignApp() {
@@ -112,7 +176,7 @@ function removeOldPatchAssets() {
   }
 }
 
-function main() {
+export function installRtlPatch() {
   if (!existsSync(APP_PATH) || !existsSync(WEB_DIST_DIR) || !existsSync(ASSETS_DIR)) {
     throw new Error(`OpenChamber.app was not found at ${APP_PATH} or its web-dist folder is missing`);
   }
@@ -125,7 +189,7 @@ function main() {
   if (!existsSync(rtlPatchPath)) throw new Error(`Missing ${rtlPatchPath}`);
 
   mkdirSync(STATE_DIR, { recursive: true });
-  const previousState = existsSync(STATE_PATH) ? JSON.parse(readFileSync(STATE_PATH, "utf8")) : null;
+  const previousState = readPatchState();
   const previousBackupDir = previousState?.backupDir;
   const backupExists = previousBackupDir != null && HTML_FILES.every(([name]) => existsSync(join(previousBackupDir, name)));
   const currentHash = webDistHashFrom(HTML_FILES);
@@ -147,6 +211,8 @@ function main() {
   const patchFileName = `openchamber-rtl-patch-${patchHash}.js`;
   const patchRelativeSrc = `/assets/${patchFileName}`;
   const patchDestPath = join(ASSETS_DIR, patchFileName);
+  const currentVersion = getInstalledOpenChamberVersion();
+  const originalAppPath = ensureOriginalAppBackup(currentVersion) || previousState?.originalAppPath || null;
 
   console.log("Stopping OpenChamber if it is running...");
   stopOpenChamberIfRunning();
@@ -169,15 +235,17 @@ function main() {
     writeFileSync(filePath, injectRtlScriptIntoHtml(html, patchRelativeSrc));
   }
 
-  writeFileSync(STATE_PATH, JSON.stringify({
+  writePatchState({
     installedAt: new Date().toISOString(),
     appPath: APP_PATH,
     webDistDir: WEB_DIST_DIR,
     backupDir,
     htmlFiles: Object.fromEntries(HTML_FILES),
     patchFileName,
-    openChamberVersion: output("/usr/libexec/PlistBuddy", ["-c", "Print :CFBundleShortVersionString", `${APP_PATH}/Contents/Info.plist`]),
-  }, null, 2));
+    openChamberVersion: currentVersion,
+    originalAppPath,
+    originalAppVersion: originalAppPath ? basename(originalAppPath, ".app") : null,
+  });
 
   console.log("Re-signing OpenChamber locally...");
   adHocResignApp();
@@ -186,5 +254,5 @@ function main() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
+  installRtlPatch();
 }

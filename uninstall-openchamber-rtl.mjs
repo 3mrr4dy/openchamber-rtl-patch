@@ -18,6 +18,15 @@ function stopOpenChamberIfRunning() {
   } catch {
     // OpenChamber may not be running.
   }
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    try {
+      execFileSync("pgrep", ["-f", `${APP_PATH}/Contents/MacOS/OpenChamber$`], { stdio: "ignore" });
+      execFileSync("sleep", ["1"]);
+    } catch {
+      return;
+    }
+  }
+  throw new Error("OpenChamber did not quit cleanly; refusing to replace the app while it is running.");
 }
 
 function adHocResignApp() {
@@ -26,6 +35,14 @@ function adHocResignApp() {
   } catch {
     console.warn("Warning: ad-hoc codesign failed.");
   }
+}
+
+function restoreOfficialAppBundle(state) {
+  if (!state.originalAppPath || !existsSync(state.originalAppPath)) return false;
+  console.log(`Restoring official signed OpenChamber ${state.originalAppVersion || state.openChamberVersion}...`);
+  rmSync(APP_PATH, { recursive: true, force: true });
+  execFileSync("ditto", [state.originalAppPath, APP_PATH], { stdio: "inherit" });
+  return true;
 }
 
 function removePatchAssets() {
@@ -53,6 +70,10 @@ if (!existsSync(backupIndexHtml) || !existsSync(backupMiniChatHtml)) {
 
 console.log("Stopping OpenChamber if it is running...");
 stopOpenChamberIfRunning();
+if (restoreOfficialAppBundle(state)) {
+  console.log("OpenChamber RTL patch removed and the official signature was restored. Reopen OpenChamber.");
+  process.exit(0);
+}
 console.log("Restoring original OpenChamber HTML files...");
 copyFileSync(backupIndexHtml, targetIndexHtml);
 copyFileSync(backupMiniChatHtml, targetMiniChatHtml);

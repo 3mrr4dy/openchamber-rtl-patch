@@ -32,6 +32,18 @@ You may be asked for your macOS password depending on your local permissions.
 
 After installation, reopen OpenChamber.
 
+The installer now saves a complete copy of the official signed app before patching. Check the current state with:
+
+```bash
+bash openchamber-rtl-patch.sh --status
+```
+
+For a selectable tool menu, run:
+
+```bash
+bash openchamber-rtl-patch.sh --menu
+```
+
 ## Restore
 
 To restore the original OpenChamber files:
@@ -40,9 +52,21 @@ To restore the original OpenChamber files:
 bash openchamber-rtl-patch.sh --restore
 ```
 
+Restore puts the complete official signed app back when that backup exists, so the built-in updater remains valid.
+
+## Smart updates
+
+Run this command before using OpenChamber's **Restart to Update** button:
+
+```bash
+bash openchamber-rtl-patch.sh --smart-update
+```
+
+It restores the official signed bundle, opens OpenChamber, waits for the version to change, and reapplies the RTL patch after the new version starts. Keep the terminal window open while the update runs.
+
 ## After OpenChamber Updates
 
-OpenChamber updates may overwrite the patch. If RTL support disappears after an update, run the installer again.
+If an update is started without `--smart-update`, the official updater may remove the patch. Run the installer again only after confirming the new app version is installed; using `--restore` first is safer when the patch state is uncertain.
 
 The installer keeps backups under:
 
