@@ -10,6 +10,16 @@
     "input[type='search']",
     "[contenteditable='true']",
     "[role='textbox']",
+    "[role='option']",
+    "[data-suggestion]",
+    "[data-session-suggestion]",
+    "[data-draft-starter]",
+    "[data-slot='command-item']",
+    ".oc-draft-starters button",
+    "button[aria-label*='suggest' i]",
+    "button[aria-label*='proposed' i]",
+    "button[aria-label*='اقتراح' i]",
+    "button[aria-label*='مقترح' i]",
     "[data-markdown]",
     "[data-markdown] p",
     "[data-markdown] li",
@@ -61,6 +71,16 @@
     ".typography-body",
     "[data-markdown]",
     "[class*='prose' i]",
+    "[role='option']",
+    "[data-suggestion]",
+    "[data-session-suggestion]",
+    "[data-draft-starter]",
+    "[data-slot='command-item']",
+    ".oc-draft-starters button",
+    "button[aria-label*='suggest' i]",
+    "button[aria-label*='proposed' i]",
+    "button[aria-label*='اقتراح' i]",
+    "button[aria-label*='مقترح' i]",
   ].join(",");
 
   if (window[PATCH_ID]) return;
@@ -78,6 +98,12 @@
       }
 
       [data-openchamber-rtl-text-surface="true"] {
+        direction: rtl !important;
+        text-align: right !important;
+        unicode-bidi: plaintext;
+      }
+
+      [data-openchamber-rtl-suggestion="true"] {
         direction: rtl !important;
         text-align: right !important;
         unicode-bidi: plaintext;
@@ -152,8 +178,47 @@
     return element === document.body || element === document.documentElement || element.id === "root";
   }
 
+  function isSuggestionSurface(element) {
+    if (!(element instanceof HTMLElement)) return false;
+    if (element.matches(SUGGESTION_SELECTOR)) return true;
+    if (element.tagName !== "BUTTON") return false;
+
+    const label = element.getAttribute("aria-label") || "";
+    if (/suggest|proposed|اقتراح|مقترح/i.test(label)) return true;
+
+    // SessionSuggestionChip uses the pencil-ai-2 sprite icon without a stable
+    // class or data attribute. Keep this narrow so normal toolbar buttons are
+    // not accidentally treated as suggestion surfaces.
+    return Boolean(element.querySelector("use[href$='#oc-pencil-ai-2'], use[href$='pencil-ai-2']"));
+  }
+
+  const SUGGESTION_SELECTOR = [
+    "[role='option']",
+    "[data-suggestion]",
+    "[data-session-suggestion]",
+    "[data-draft-starter]",
+    "[data-slot='command-item']",
+    ".oc-draft-starters button",
+    "button[aria-label*='suggest' i]",
+    "button[aria-label*='proposed' i]",
+    "button[aria-label*='اقتراح' i]",
+    "button[aria-label*='مقترح' i]",
+  ].join(",");
+
+  function nearestSuggestionSurface(element) {
+    let current = element;
+    while (current && current instanceof HTMLElement && !isAppShell(current)) {
+      if (shouldSkip(current)) return null;
+      if (isSuggestionSurface(current)) return current;
+      current = current.parentElement;
+    }
+    return null;
+  }
+
   function nearestTextSurface(element) {
     if (!(element instanceof HTMLElement) || shouldSkip(element)) return null;
+    const suggestion = nearestSuggestionSurface(element);
+    if (suggestion) return suggestion;
     const explicit = element.closest(TEXT_SURFACE_SELECTOR);
     if (explicit instanceof HTMLElement && !isAppShell(explicit) && !shouldSkip(explicit)) {
       return explicit;
@@ -177,6 +242,9 @@
     if (!surface) return;
     surface.dataset.openchamberRtlTextSurface = "true";
     surface.dataset.openchamberRtl = "true";
+    if (isSuggestionSurface(surface)) {
+      surface.dataset.openchamberRtlSuggestion = "true";
+    }
     surface.setAttribute("dir", "rtl");
   }
 
@@ -202,9 +270,15 @@
     if (!(element instanceof HTMLElement) || shouldSkip(element)) return;
     const text = elementText(element).trim();
     const rtl = shouldApplyRtl(text);
+    const suggestion = isSuggestionSurface(element);
 
     if (rtl) {
       element.dataset.openchamberRtl = "true";
+      if (suggestion) {
+        element.dataset.openchamberRtlSuggestion = "true";
+      } else {
+        delete element.dataset.openchamberRtlSuggestion;
+      }
       element.setAttribute("dir", "rtl");
       return;
     }
@@ -213,6 +287,7 @@
       delete element.dataset.openchamberRtl;
       if (element.getAttribute("dir") === "rtl") element.setAttribute("dir", "auto");
     }
+    delete element.dataset.openchamberRtlSuggestion;
 
     if (isEditable(element)) {
       element.removeAttribute("data-openchamber-rtl");

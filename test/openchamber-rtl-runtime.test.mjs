@@ -28,6 +28,14 @@ test("runtime scans text nodes so message markup without known classes is handle
   assert.match(runtime, /nearestTextSurface/);
 });
 
+test("runtime treats Arabic suggestion cards as RTL surfaces", () => {
+  assert.match(runtime, /SUGGESTION_SELECTOR/);
+  assert.match(runtime, /button\[aria-label\*='suggest'/i);
+  assert.match(runtime, /\.oc-draft-starters button/);
+  assert.match(runtime, /pencil-ai-2/);
+  assert.match(runtime, /data-openchamber-rtl-suggestion/);
+});
+
 test("runtime batches mutation roots instead of cancelling earlier scans", () => {
   assert.match(runtime, /pendingScanRoots/);
   assert.match(runtime, /pendingScanRoots\.add/);
