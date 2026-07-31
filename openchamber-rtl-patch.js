@@ -10,6 +10,7 @@
     "input[type='search']",
     "[contenteditable='true']",
     "[role='textbox']",
+    "[data-chat-input='true'] .cm-content",
     "[role='option']",
     "[data-suggestion]",
     "[data-session-suggestion]",
@@ -71,6 +72,7 @@
     ".typography-body",
     "[data-markdown]",
     "[class*='prose' i]",
+    "[data-chat-input='true'] .cm-content",
     "[role='option']",
     "[data-suggestion]",
     "[data-session-suggestion]",
@@ -104,6 +106,12 @@
       }
 
       [data-openchamber-rtl-suggestion="true"] {
+        direction: rtl !important;
+        text-align: right !important;
+        unicode-bidi: plaintext;
+      }
+
+      [data-chat-input="true"] .cm-content[data-openchamber-rtl="true"] {
         direction: rtl !important;
         text-align: right !important;
         unicode-bidi: plaintext;
@@ -166,7 +174,12 @@
     );
   }
 
+  function isComposerElement(element) {
+    return element instanceof Element && Boolean(element.closest("[data-chat-input='true']"));
+  }
+
   function shouldSkip(element) {
+    if (isComposerElement(element)) return false;
     return element instanceof Element && Boolean(element.closest(SKIP_SELECTOR));
   }
 

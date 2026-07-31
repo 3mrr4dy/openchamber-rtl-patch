@@ -36,6 +36,12 @@ test("runtime treats Arabic suggestion cards as RTL surfaces", () => {
   assert.match(runtime, /data-openchamber-rtl-suggestion/);
 });
 
+test("runtime handles the CodeMirror composer without flipping other code editors", () => {
+  assert.match(runtime, /\[data-chat-input='true'\] \.cm-content/);
+  assert.match(runtime, /function isComposerElement/);
+  assert.match(runtime, /if \(isComposerElement\(element\)\) return false/);
+});
+
 test("runtime batches mutation roots instead of cancelling earlier scans", () => {
   assert.match(runtime, /pendingScanRoots/);
   assert.match(runtime, /pendingScanRoots\.add/);
