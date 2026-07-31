@@ -44,6 +44,25 @@ For a selectable tool menu, run:
 bash openchamber-rtl-patch.sh --menu
 ```
 
+## CLI
+
+Install the command from a checkout:
+
+```bash
+npm install --global .
+```
+
+Then use:
+
+```bash
+openchamber-rtl install
+openchamber-rtl status --json
+openchamber-rtl update
+openchamber-rtl restore
+```
+
+`update` restores the official signed bundle, waits for OpenChamber's version to change, and reapplies RTL after the update. Keep the terminal open and click **Restart to Update** in OpenChamber.
+
 ## Restore
 
 To restore the original OpenChamber files:

@@ -1,11 +1,14 @@
 {
   "name": "openchamber-rtl-patch",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": false,
   "type": "module",
+  "bin": {
+    "openchamber-rtl": "bin/openchamber-rtl.mjs"
+  },
   "description": "Unofficial macOS-only RTL patch for the OpenChamber desktop app.",
   "scripts": {
-    "test": "node --test test/*.test.mjs && node --check openchamber-rtl-patch.js && node --check install-openchamber-rtl.mjs && node --check uninstall-openchamber-rtl.mjs && node --check smart-update-openchamber.mjs && node --check status-openchamber-rtl.mjs && bash -n openchamber-rtl-patch.sh"
+    "test": "node --test test/*.test.mjs && node --check openchamber-rtl-patch.js && node --check install-openchamber-rtl.mjs && node --check uninstall-openchamber-rtl.mjs && node --check smart-update-openchamber.mjs && node --check status-openchamber-rtl.mjs && node --check bin/openchamber-rtl.mjs && bash -n openchamber-rtl-patch.sh"
   },
   "keywords": [
     "openchamber",
